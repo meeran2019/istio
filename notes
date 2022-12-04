@@ -1,1 +1,44 @@
-.
+---------------------------------------------------------------------------------------------------------
+Refresher:
+---------------------------------------------------------------------------------------------------------
+
+Kubernetes Services:
+    Each pod have own IP address. Pods are ephermal in nature.
+    Service is used to loadbalance and no need of pod IP address.
+    Types,
+        ClusterIP
+        NodePort
+        Loadbalancer
+        ExternalName
+
+SideCars Container:
+    This is design pattern.
+    It runs along with main container in same pod.
+    Containers uses the same network and storage.
+    Used for logshipping, monitoring etc.
+    It helps to isolate business functionality.
+
+Envoy:
+    It is open source proxy. 
+    Proxy is used to separate tls/auth/retry from application. 
+
+---------------------------------------------------------------------------------------------------------
+Introduction:
+---------------------------------------------------------------------------------------------------------
+
+Service Mesh:
+    Abstracting or separating networking logic from business logic.
+    Networking handle separately.
+    It is run as proxy in sidecar container.
+
+Istio:
+    It is open source service mesh.
+    It works with kubernetes and traditional.
+    istiod daemon is used in control plane.
+    envoy is used as proxy to communicate and uses istop agent.
+
+Installing Istio:
+    It can install in cluster by using,
+        helm
+        istioctl
+        Istio operator install.
