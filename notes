@@ -33,12 +33,139 @@ Service Mesh:
 
 Istio:
     It is open source service mesh.
+    It consists of control plane and data plane. Data plane is envoy proxy which runs in pod.
+    Microservices are communicated through envoy proxy.
     It works with kubernetes and traditional.
     istiod daemon is used in control plane.
-    envoy is used as proxy to communicate and uses istop agent.
+    istioagent is runs in data plane.
+    envoy is used as proxy to communicate and uses istio agent.
 
 Installing Istio:
     It can install in cluster by using,
         helm
         istioctl
         Istio operator install.
+
+    istioctl analyze  -> Used to check the configuration of istio.
+
+    Refer the below documentation to install using HELM
+        https://istio.io/latest/docs/setup/install/helm/
+
+    Deploy first application:
+        https://istio.io/latest/docs/setup/getting-started/
+
+    Add a namespace label to instruct Istio to automatically inject Envoy sidecar proxies when you deploy your application LATER: (It is mandatory to inject istio envoy)
+         kubectl label namespace default istio-injection=enabled/disabled
+
+---------------------------------------------------------------------------------------------------------    
+KIALI:
+---------------------------------------------------------------------------------------------------------
+
+    Kiali - Distributed tracing which gives UI based visualization.
+
+    https://kiali.io/docs/installation/installation-guide/example-install/
+
+---------------------------------------------------------------------------------------------------------
+Traffic Management:
+---------------------------------------------------------------------------------------------------------
+
+    It consists of Gateways, Virtual services, Destination Rules, Subsets, Timeouts, Retries, Circuit breaking, Fault injection, Request routing, A/B testing.
+
+    Gateways:
+        It is gateway to mesh and act as frontend.
+        It consists of istio-ingressgateway and istio-egressgateway.
+        It used in conjugation with virtualservice.
+        It requires to create a gateway resource object,
+            apiVersion: networking.istio.io/v1alpha3
+            kind: Gateway
+            metadata:
+            name: my-gateway
+            spec:
+            selector:
+                istio: ingressgateway # typically, this should point to the ingress gateway pods
+            servers:
+            - port:
+                number: 80
+                name: http
+                protocol: HTTP
+                hosts:
+                - "example.com"
+
+        It helps to capture traffic on specific host and port. But where to send traffic ? virtual host is used.
+
+    Virtual Service:
+        It is traffic rule defined which traffic coming from gateway to route to services.
+        
+        apiVersion: networking.istio.io/v1alpha3
+        kind: VirtualService
+        metadata:
+        name: my-service-vs
+        spec:
+        hosts:
+        - my-service.default.svc.cluster.local  (#HOST where this virtualservice applies to)
+        gateways:
+        - my-gateway 
+        http:
+        - match:
+          - uri:
+            exact: /productpage
+          - uri:
+            prefix: /login
+        - route:
+            - destination:
+                host: my-service.default.svc.cluster.local  (route to this SERVICE)
+                subset: v1
+                port:
+                number: 80
+            weight: 75
+            - destination:
+                host: my-service.default.svc.cluster.local
+                subset: v2
+              weight: 25
+
+    Destination Rules:
+        It helps to route traffic of service to specific pods.
+
+        apiVersion: networking.istio.io/v1alpha3
+        kind: DestinationRule
+        metadata:
+         name: my-service-dr
+        spec:
+         trafficpolicy:
+            loadbalancer:
+                simple: passthrough/roundrobin/random/leastconnection
+         host: my-service.default.svc.cluster.local  (service name)
+        subsets:
+        - name: v1
+          labels:
+            version: v1     (LABEL defined at POD Level)
+        - name: v2
+          labels
+            version: v2     (LABEL defined at POD level)
+
+Fault Injection:
+    It is done at virtualservice level.
+    It consists of delay and abort.
+
+Timeout:
+    Delay in oneservice cause cascading effect.
+    Can configure timeout at virtualservice level.
+
+Retries:
+    When service is failed, it retry by default 2 times.
+    can be configure using retry block.
+
+Circuit Breaking:
+    It helps to allow max number of connections to service.
+    It is maintained at destination rule.
+    
+    trafficpolicy:
+        connectionpool:
+            tcp:
+                maxConnections: 3
+
+A/B Testing:
+    with the help of weightage, can distribute traffic to different subsets.
+
+---------------------------------------------------------------------------------------------------------
+        
