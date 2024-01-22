@@ -76,18 +76,19 @@ Traffic Management:
         It consists of istio-ingressgateway and istio-egressgateway.
         It used in conjugation with virtualservice.
         It requires to create a gateway resource object,
+
             apiVersion: networking.istio.io/v1alpha3
             kind: Gateway
-            metadata:
-            name: my-gateway
+                metadata:
+                    name: my-gateway
             spec:
-            selector:
-                istio: ingressgateway # typically, this should point to the ingress gateway pods
-            servers:
-            - port:
-                number: 80
-                name: http
-                protocol: HTTP
+                selector:
+                    istio: ingressgateway # typically, this should point to the ingress gateway pods
+                servers:
+                - port:
+                    number: 80
+                    name: http
+                    protocol: HTTP
                 hosts:
                 - "example.com"
 
@@ -99,29 +100,29 @@ Traffic Management:
         apiVersion: networking.istio.io/v1alpha3
         kind: VirtualService
         metadata:
-        name: my-service-vs
+            name: my-service-vs
         spec:
-        hosts:
-        - my-service.default.svc.cluster.local  (#HOST where this virtualservice applies to)
-        gateways:
-        - my-gateway 
-        http:
-        - match:
-          - uri:
-            exact: /productpage
-          - uri:
-            prefix: /login
-        - route:
-            - destination:
-                host: my-service.default.svc.cluster.local  (route to this SERVICE)
-                subset: v1
-                port:
-                number: 80
-            weight: 75
-            - destination:
-                host: my-service.default.svc.cluster.local
-                subset: v2
-              weight: 25
+            hosts:
+            - my-service.default.svc.cluster.local  (#HOST where this virtualservice applies to)
+            gateways:
+            - my-gateway 
+                http:
+                - match:
+                    - uri:
+                    exact: /productpage
+                    - uri:
+                    prefix: /login
+                - route:
+                - destination:
+                    host: my-service.default.svc.cluster.local  (route to this SERVICE)
+                        subset: v1
+                        port:
+                        number: 80
+                    weight: 75
+                - destination:
+                    host: my-service.default.svc.cluster.local
+                        subset: v2
+                        weight: 25
 
     Destination Rules:
         It helps to route traffic of service to specific pods.
@@ -172,4 +173,59 @@ Security:
 ---------------------------------------------------------------------------------------------------------    
 
 Introduction:
-    
+    It supports authentication, authorization, mTLS, Certificate Management.
+    When one service call another service, there is possibility of man in the middle attack. 
+    To prevent this, 
+        traffic to be encrypted.
+        allow only specific service to call another service. (Access control)
+        Audit logs.
+
+Security Architecture:
+
+    Certification Authority:
+        It is responsible to validate a CSR.
+
+    Authentication:
+        Service is authenticated in service by using certificates.
+        For end user, istio support JWT or OpenID connect.
+        PeerAuthentication is applied at NAMESPACE level.
+        istio-system namespace level ensure istio components are interacting using mTLS.
+
+        apiVersion: security.istio.io/v1beta1
+        kind: PeerAuthentication
+        metadata:
+            name: default
+            namespace: your-namespace   (It applies at custom namespace or istio-system level)
+        spec:
+            mtls:
+                mode: STRICT/PERMISSIVE/PERMISSION-INGRESS
+
+
+    Authorization:
+        It tells which service to call other service.
+        What are all the METHODS allowed.
+
+        apiVersion: security.istio.io/v1beta1
+        kind: AuthorizationPolicy
+            metadata:
+                name: my-auth-policy
+                namespace: your-namespace
+        spec:
+            selector:
+                matchLabels:
+                app: my-service     (Select service)
+            action: ALLOW           (Support ALLOW, DENY, CUSTOM. If not given, default DENY)
+            rules:
+            - from:
+                - source:
+                    labels:
+                    app: trusted-service
+                to:
+                - operation:
+                    methods: ["GET"]
+
+
+    Certificate Management:
+        In istiod, have CA. Istio agent send CSR to istiod. CSR signed in CA and send CER and private key to proxy.
+
+        
